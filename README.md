@@ -65,3 +65,5 @@ python3 scripts/run_loop.py
 - 真实状态源只有 `data/tasks.json`
 - Slack 仅用于纯文本通知
 - 不包含 Web UI、数据库、Docker 或复杂多 agent 扩展
+
+11
