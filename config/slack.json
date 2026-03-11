@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "mode": "webhook",
+  "text_only": true,
+  "notify_on": {
+    "task_created": true,
+    "status_updated": true,
+    "handoff": true,
+    "reviewed": true,
+    "blocked": true,
+    "done": true
+  },
+  "targets": {
+    "editor": "SLACK_EDITOR_WEBHOOK_URL",
+    "reviewer": "SLACK_REVIEWER_WEBHOOK_URL"
+  },
+  "prefix": "[edict-lite]"
+}

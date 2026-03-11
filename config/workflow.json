@@ -1,0 +1,31 @@
+{
+  "states": [
+    "new",
+    "in_progress",
+    "in_review",
+    "revision_required",
+    "done",
+    "blocked"
+  ],
+  "transitions": {
+    "new": ["in_progress", "blocked"],
+    "in_progress": ["in_review", "blocked"],
+    "in_review": ["done", "revision_required", "blocked"],
+    "revision_required": ["in_progress", "blocked"],
+    "done": [],
+    "blocked": ["in_progress"]
+  },
+  "default_owner_by_state": {
+    "new": "editor",
+    "in_progress": "editor",
+    "in_review": "reviewer",
+    "revision_required": "editor",
+    "done": "user",
+    "blocked": "reviewer"
+  },
+  "allowed_handoffs": {
+    "user": ["editor"],
+    "editor": ["reviewer"],
+    "reviewer": ["editor", "user"]
+  }
+}

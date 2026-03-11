@@ -1,0 +1,16 @@
+{
+  "editor": {
+    "name": "editor",
+    "role": "执行任务并产出可审核结果",
+    "prompt_file": "prompts/editor.md",
+    "can_handoff_to": ["reviewer"],
+    "slack_env_key": "SLACK_EDITOR_WEBHOOK_URL"
+  },
+  "reviewer": {
+    "name": "reviewer",
+    "role": "审核结果并给出具体、可执行的审核意见",
+    "prompt_file": "prompts/reviewer.md",
+    "can_handoff_to": ["editor", "user"],
+    "slack_env_key": "SLACK_REVIEWER_WEBHOOK_URL"
+  }
+}
