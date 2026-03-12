@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TASKS_FILE = ROOT / "data" / "tasks.json"
 NOTIFY_SCRIPT = ROOT / "scripts" / "notify_slack.py"
+SLACK_THREAD_REPLY_SCRIPT = ROOT / "scripts" / "slack_thread_reply.py"
 
 VALID = {
     "approved": "done",
@@ -60,6 +61,17 @@ def notify(agent: str, event: str, task_id: str, status: str, owner: str, messag
         )
     except Exception as e:
         print(f"[WARN] slack notify failed: {e}")
+
+
+def reply_to_task_origin(task_id: str) -> None:
+    try:
+        subprocess.run(
+            [sys.executable, str(SLACK_THREAD_REPLY_SCRIPT), task_id],
+            check=False,
+            cwd=str(ROOT),
+        )
+    except Exception as e:
+        print(f"[WARN] slack thread reply failed: {e}")
 
 
 def main():
@@ -149,6 +161,9 @@ def main():
                 new_owner,
                 f"任务阻塞：{comment}"
             )
+
+        if new_status in {"done", "revision_required", "blocked"}:
+            reply_to_task_origin(task_id)
 
         print(json.dumps(task, ensure_ascii=False, indent=2))
         return

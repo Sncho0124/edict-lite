@@ -47,6 +47,15 @@ def main():
     data = load_tasks()
     timestamp = now_iso()
 
+    task_meta = {}
+    if len(sys.argv) >= 4:
+        try:
+            parsed_meta = json.loads(sys.argv[3])
+            if isinstance(parsed_meta, dict):
+                task_meta = parsed_meta
+        except Exception:
+            task_meta = {}
+
     task = {
         "id": str(uuid.uuid4())[:8],
         "title": title,
@@ -55,6 +64,7 @@ def main():
         "owner": "editor",
         "result": "",
         "review_notes": "",
+        "meta": task_meta,
         "created_at": timestamp,
         "updated_at": timestamp,
         "history": [

@@ -27,9 +27,15 @@ pip install -r requirements.txt
 ## 环境变量
 复制并编辑 `.env`：
 ```bash
+SLACK_BOT_TOKEN=
+SLACK_APP_TOKEN=
 SLACK_EDITOR_WEBHOOK_URL=
 SLACK_REVIEWER_WEBHOOK_URL=
 ```
+
+说明：
+- `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` 用于监听消息并把最终结果回帖到原线程
+- `SLACK_EDITOR_WEBHOOK_URL` / `SLACK_REVIEWER_WEBHOOK_URL` 仍用于 editor / reviewer 侧的纯文本通知
 
 ## 初始化
 ```bash
