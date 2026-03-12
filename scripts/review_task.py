@@ -162,7 +162,7 @@ def main():
                 f"任务阻塞：{comment}"
             )
 
-        if new_status == "done":
+        if new_status in {"done", "blocked"}:
             reply_to_task_origin(task_id)
 
         print(json.dumps(task, ensure_ascii=False, indent=2))

@@ -51,21 +51,10 @@ def build_reply_text(task: dict) -> str:
             parts.extend(["", "reviewer 意见：", review_notes])
         return "\n".join(parts)
 
-    if status == "revision_required":
-        parts = [f"多 agent 任务需要修改：`{task_id}`"]
-        if title:
-            parts.append(f"标题：{title}")
-        if review_notes:
-            parts.extend(["", "reviewer 反馈：", review_notes])
-        return "\n".join(parts)
-
     if status == "blocked":
-        parts = [f"多 agent 任务已阻塞：`{task_id}`"]
-        if title:
-            parts.append(f"标题：{title}")
         if review_notes:
-            parts.extend(["", "阻塞原因：", review_notes])
-        return "\n".join(parts)
+            return f"多 agent 任务已 blocked：`{task_id}`\n原因：{review_notes}"
+        return f"多 agent 任务已 blocked：`{task_id}`"
 
     return f"任务状态更新：`{task_id}` status={status}"
 
