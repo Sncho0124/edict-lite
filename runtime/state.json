@@ -1,8 +1,8 @@
 {
-  "last_scan_at": "2026-03-11T13:11:09.653334+00:00",
-  "task_count": 15,
+  "last_scan_at": "2026-03-19T01:47:05.597565+00:00",
+  "task_count": 10,
   "tasks_by_state": {
-    "done": 15
+    "done": 10
   },
   "editor_queue_ids": [],
   "reviewer_queue_ids": [],

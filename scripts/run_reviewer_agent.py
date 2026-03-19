@@ -69,28 +69,12 @@ result:
 
 
 def extract_text_from_openclaw_payload(payload):
-    """
-    兼容 OpenClaw 2026.3.8 的 --json 输出。
-    优先读取:
-    payload["result"]["payloads"][0]["text"]
-    """
-
     if payload is None:
         return None
 
     if isinstance(payload, str):
         return payload.strip()
 
-    # 1) 最新观察到的 OpenClaw 结构：
-    # {
-    #   "runId": "...",
-    #   "status": "ok",
-    #   "result": {
-    #       "payloads": [
-    #           {"text": "..."}
-    #       ]
-    #   }
-    # }
     result_obj = payload.get("result")
     if isinstance(result_obj, dict):
         payloads = result_obj.get("payloads")
@@ -104,7 +88,6 @@ def extract_text_from_openclaw_payload(payload):
             if parts:
                 return "\n".join(parts)
 
-    # 2) 兼容旧/其他可能字段
     candidates = [
         payload.get("text"),
         payload.get("reply"),
@@ -137,6 +120,7 @@ def extract_text_from_openclaw_payload(payload):
             return "\n".join(parts)
 
     return None
+
 
 def try_parse_agent_json(text: str):
     text = text.strip()

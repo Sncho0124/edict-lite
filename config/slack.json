@@ -14,5 +14,10 @@
     "editor": "SLACK_EDITOR_WEBHOOK_URL",
     "reviewer": "SLACK_REVIEWER_WEBHOOK_URL"
   },
+  "delegate": {
+    "reviewer_bot_env": "SLACK_REVIEWER_DELEGATE_BOT_USER_ID",
+    "timeout_seconds_env": "SLACK_REVIEWER_DELEGATE_TIMEOUT_SECONDS",
+    "poll_seconds_env": "SLACK_REVIEWER_DELEGATE_POLL_SECONDS"
+  },
   "prefix": "[edict-lite]"
 }
