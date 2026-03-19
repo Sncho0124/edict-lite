@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 from slack_bolt import App
@@ -10,10 +11,32 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 
 ROOT = Path(__file__).resolve().parents[1]
+LOG_FILE = ROOT / "runtime" / "slack-listener-events.log"
 
 app = App(token=os.environ["SLACK_BOT_TOKEN"])
 
+DEFAULT_TRIGGER_BOT_USER_ID = "U0AKCGJ00A3"
 MULTI_AGENT_PREFIX = "/ma"
+
+
+def trigger_bot_user_id() -> str:
+    return os.getenv("SLACK_TRIGGER_BOT_USER_ID", DEFAULT_TRIGGER_BOT_USER_ID).strip()
+
+
+def trigger_mention() -> str:
+    return f"<@{trigger_bot_user_id()}>"
+
+
+def log_event(kind: str, payload: dict) -> None:
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "at": datetime.now(timezone.utc).isoformat(),
+        "kind": kind,
+        "payload": payload,
+    }
+    with LOG_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
 
 
 def run_cmd(cmd: list[str]) -> str:
@@ -32,18 +55,19 @@ def run_cmd(cmd: list[str]) -> str:
     return result.stdout.strip()
 
 
-def strip_mention(text: str) -> str:
-    return re.sub(r"^\s*<@[\w]+>\s*", "", text).strip()
+def strip_bot_mention(text: str) -> str:
+    mention = re.escape(trigger_mention())
+    return re.sub(rf"^\s*{mention}\s*", "", text).strip()
 
 
-def should_use_multi_agent(text: str) -> bool:
-    return text.strip().startswith(MULTI_AGENT_PREFIX)
+def contains_trigger_mention(text: str) -> bool:
+    return trigger_mention() in (text or "")
 
 
-def extract_multi_agent_task(text: str) -> str:
-    text = text.strip()
+def extract_task_text(text: str) -> str:
+    text = strip_bot_mention(text).strip()
     if text.startswith(MULTI_AGENT_PREFIX):
-        return text[len(MULTI_AGENT_PREFIX):].strip()
+        text = text[len(MULTI_AGENT_PREFIX):].strip()
     return text
 
 
@@ -58,6 +82,7 @@ def create_task(text: str, event: dict) -> dict:
         "channel": event.get("channel"),
         "thread_ts": event.get("thread_ts") or event.get("ts"),
         "user": event.get("user"),
+        "trigger_bot_user_id": trigger_bot_user_id(),
     }
 
     out = run_cmd([
@@ -79,34 +104,23 @@ def create_task(text: str, event: dict) -> dict:
     return data
 
 
-def normal_reply(text: str) -> str:
-    text = text.strip()
-
-    if text in ["你好", "您好", "hi", "hello"]:
-        return "你好～我在。想让我帮你做什么？"
-
-    if text in ["在吗", "在吗？", "在么", "在？"]:
-        return "在，我在。"
-
-    return (
-        "我在。\n"
-        f"普通聊天我会直接回复；如果你要进入多 agent 流程，请用：`{MULTI_AGENT_PREFIX} 你的任务`"
-    )
-
-
-def process_message(text: str, event: dict, say, thread_ts: str) -> None:
-    if not text:
-        say("请直接输入内容。", thread_ts=thread_ts)
+def process_triggered_message(text: str, event: dict, say, thread_ts: str) -> None:
+    log_event("process_triggered_message", {
+        "channel": event.get("channel"),
+        "channel_type": event.get("channel_type"),
+        "user": event.get("user"),
+        "thread_ts": thread_ts,
+        "text": text,
+        "trigger_mention": trigger_mention(),
+        "contains_trigger": contains_trigger_mention(text),
+    })
+    if not contains_trigger_mention(text):
         return
 
-    if not should_use_multi_agent(text):
-        say(normal_reply(text), thread_ts=thread_ts)
-        return
-
-    task_text = extract_multi_agent_task(text)
+    task_text = extract_task_text(text)
     if not task_text:
         say(
-            f"请在 `{MULTI_AGENT_PREFIX}` 后面写具体任务，例如：`{MULTI_AGENT_PREFIX} 写一份产品发布稿`",
+            f"请在 {trigger_mention()} 后面直接写任务内容。",
             thread_ts=thread_ts,
         )
         return
@@ -133,13 +147,31 @@ def process_message(text: str, event: dict, say, thread_ts: str) -> None:
 
 @app.event("app_mention")
 def on_app_mention(event, say):
-    text = strip_mention(event.get("text", ""))
+    log_event("app_mention", {
+        "channel": event.get("channel"),
+        "channel_type": event.get("channel_type"),
+        "user": event.get("user"),
+        "ts": event.get("ts"),
+        "thread_ts": event.get("thread_ts"),
+        "text": event.get("text", ""),
+    })
+    text = event.get("text", "")
     thread_ts = event.get("thread_ts") or event["ts"]
-    process_message(text, event, say, thread_ts)
+    process_triggered_message(text, event, say, thread_ts)
 
 
 @app.event("message")
 def on_dm_message(event, say):
+    log_event("message_event", {
+        "channel": event.get("channel"),
+        "channel_type": event.get("channel_type"),
+        "user": event.get("user"),
+        "ts": event.get("ts"),
+        "thread_ts": event.get("thread_ts"),
+        "subtype": event.get("subtype"),
+        "bot_id": event.get("bot_id"),
+        "text": event.get("text", ""),
+    })
     if event.get("channel_type") != "im":
         return
     if event.get("subtype"):
@@ -147,9 +179,10 @@ def on_dm_message(event, say):
     if event.get("bot_id"):
         return
 
-    text = event.get("text", "").strip()
-    thread_ts = event.get("thread_ts") or event["ts"]
-    process_message(text, event, say, thread_ts)
+    # Safety guard: do not consume normal Slack DMs.
+    # OpenClaw is the primary direct-message path for Rui.
+    # edict-lite should only react in shared spaces via explicit mention.
+    return
 
 
 def start_slack_listener() -> None:

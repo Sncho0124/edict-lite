@@ -23,7 +23,14 @@ load_dotenv(ROOT / ".env")
 orchestrator_process = None
 
 
+def slack_listener_enabled() -> bool:
+    return os.getenv("EDICTLITE_ENABLE_SLACK_LISTENER", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def validate_env() -> None:
+    if not slack_listener_enabled():
+        return
+
     required = [
         "SLACK_BOT_TOKEN",
         "SLACK_APP_TOKEN",
@@ -73,11 +80,17 @@ def main() -> None:
 
     orchestrator_process = start_orchestrator()
 
-    from slack_listener import start_slack_listener
-
     print("Starting edict-lite...")
-    print("Mode: Slack + orchestrator")
-    start_slack_listener()
+    print("Mode: orchestrator-only")
+
+    if slack_listener_enabled():
+        from slack_listener import start_slack_listener
+        print("Slack listener: enabled by EDICTLITE_ENABLE_SLACK_LISTENER=true")
+        start_slack_listener()
+    else:
+        print("Slack listener: disabled (default)")
+        print("This avoids Slack route conflicts with OpenClaw.")
+        orchestrator_process.wait()
 
 
 if __name__ == "__main__":
